@@ -42,7 +42,7 @@ let tempoAnimacao = 0;
 const musicaFundo = new Audio();
 musicaFundo.src = "som/musica_fundo.mp3";
 musicaFundo.loop = true;
-musicaFundo.volume = ;
+musicaFundo.volume = 0.9;
 
 // Tentar tocar música (será ativado no primeiro clique)
 musicaFundo.play().catch(() => {
@@ -958,5 +958,4 @@ function gameLoop() {
     }
     requestAnimationFrame(gameLoop);
 }
-
 };
