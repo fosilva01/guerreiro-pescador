@@ -42,7 +42,7 @@ let tempoAnimacao = 0;
 const musicaFundo = new Audio();
 musicaFundo.src = "som/musica_fundo.mp3";
 musicaFundo.loop = true;
-musicaFundo.volume = 0.9;
+musicaFundo.volume = 0.3;
 
 // Tentar tocar música (será ativado no primeiro clique)
 musicaFundo.play().catch(() => {
@@ -74,8 +74,7 @@ let jacare = {
     width: 0,
     height: 0,
     speed: 0,
-    // direcaoX será calculado baseado na posição do índio
-    direcaoX: 1,
+    direcaoX: 1, // 1 = direita, -1 = esquerda
     ondulacao: 0,
     amplitude: 3,
     frequencia: 0.2,
@@ -94,20 +93,23 @@ let peixes = [];
 let powerUps = [];
 let keys = {};
 
+// MODIFICADO: Adicionar imagem do jacaré virado para esquerda
 const imagens = {
     fundo: new Image(),
     player: new Image(),
-    inimigo: new Image(),
+    inimigo: new Image(),    // Jacaré virado para direita (padrão)
+    inimigoEsquerda: new Image(), // Jacaré virado para esquerda
     peixe: new Image()
 };
 
 imagens.fundo.src = "imagem/rio.jpeg";
 imagens.player.src = "imagem/indio.png";
-imagens.inimigo.src = "imagem/jacare.png";
+imagens.inimigo.src = "imagem/jacare.png";      // Jacaré para direita
+imagens.inimigoEsquerda.src = "imagem/jacare2.png"; // Jacaré para esquerda
 imagens.peixe.src = "imagem/peixe.png";
 
 let imagensCarregadas = 0;
-const totalImagens = 4;
+const totalImagens = 5; // MODIFICADO: Agora são 5 imagens
 
 function verificarCarregamento() {
     imagensCarregadas++;
@@ -244,7 +246,7 @@ function desenharTelaInicial() {
     }
     ctx.restore();
     
-    // Silhueta do jacaré
+    // Silhueta do jacaré (usando imagem padrão)
     ctx.save();
     ctx.globalAlpha = 0.1;
     ctx.translate(canvas.width/2 + Math.sin(tempoAnimacao * 0.5) * 50, 450);
@@ -441,7 +443,7 @@ function perseguirJogador() {
     const centroPlayerX = player.x + player.size/2;
     const centroPlayerY = player.y + player.size/2;
     
-    // ATUALIZAR DIREÇÃO - Jacaré sempre vira para o índio
+    // Atualizar direção - Jacaré sempre vira para o índio
     jacare.direcaoX = centroPlayerX > centroJacareX ? 1 : -1;
     
     const dx = centroPlayerX - centroJacareX;
@@ -463,7 +465,7 @@ function perseguirJogador() {
     jacare.y = Math.max(0, Math.min(jacare.y, canvas.height - jacare.height));
 }
 
-// Função para desenhar jacaré (versão simplificada)
+// MODIFICADO: Função para desenhar jacaré usando a imagem correta baseada na direção
 function desenharJacare() {
     if (!jacare || !jacare.ativo) return;
     
@@ -476,15 +478,21 @@ function desenharJacare() {
         ctx.scale(1, jacare.escalaVertical);
     }
     
-    // ESPELHAR BASEADO NA DIREÇÃO - Isso faz o jacaré virar a cabeça para o índio
-    ctx.scale(jacare.direcaoX, 1);
-    
     const rotacao = Math.sin(jacare.ondulacao) * 0.05;
     ctx.rotate(rotacao);
     
-    if (imagens.inimigo.complete) {
-        ctx.drawImage(imagens.inimigo, -jacare.width/2, -jacare.height/2, jacare.width, jacare.height);
+    // Escolher a imagem baseada na direção
+    let imagemJacare;
+    if (jacare.direcaoX === 1) {
+        imagemJacare = imagens.inimigo; // Jacaré virado para direita
     } else {
+        imagemJacare = imagens.inimigoEsquerda; // Jacaré virado para esquerda
+    }
+    
+    if (imagemJacare && imagemJacare.complete) {
+        ctx.drawImage(imagemJacare, -jacare.width/2, -jacare.height/2, jacare.width, jacare.height);
+    } else {
+        // Fallback colorido se a imagem não carregar
         ctx.fillStyle = '#228B22';
         ctx.fillRect(-jacare.width/2, -jacare.height/2, jacare.width, jacare.height);
     }
@@ -958,4 +966,5 @@ function gameLoop() {
     }
     requestAnimationFrame(gameLoop);
 }
+
 };
