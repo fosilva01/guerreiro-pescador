@@ -1,17 +1,53 @@
-<!DOCTYPE html>
-<html>
+ads<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Guerreiro Pescador</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ribeirinho</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="gameContainer">
+        <div style="position: relative;">
+            <canvas id="gameCanvas" width="900" height="550"></canvas>
+            <div id="loading" style="display: none;">Carregando imagens...</div>
+            <!-- Tela de input de nome -->
+            <div id="nameInputScreen" class="name-input-screen" style="display: none;">
+                <div class="name-input-title">👋 Digite seu nome</div>
+                <input type="text" id="playerNameInput" class="name-input-box" maxlength="15" placeholder="Seu nome">
+                <button class="name-input-button" onclick="confirmarNome()">COMEÇAR A PESCAR</button>
+                <div class="name-input-info">Sua maior pontuação será salva no ranking!</div>
+            </div>
+        </div>
+        
+        <div id="gameInfo">9
+            <div class="controls">
+                <div class="control-item">
+                    <span class="key">←↑↓→</span>
+                    <span>Mover</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">P</span>
+                    <span>Pausar</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">R</span>
+                    <span>Reiniciar</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">ESPAÇO</span>
+                    <span>Começar</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">M</span>
+                    <span>Música</span>
+                </div>
+            </div>
+            <div id="recordDisplay">🎯 Meta: 999 peixes | 🏆 Recorde: 0</div>
+            <div class="error" id="errorMsg"></div>
+        </div>
+    </div>
 
-<h1>Guerreiro Pescador</h1>
-
-<canvas id="gameCanvas" width="800" height="500"></canvas>
-
-<script src="script.js"></script>
-
+    <script src="script.js"></script>
 </body>
 </html>

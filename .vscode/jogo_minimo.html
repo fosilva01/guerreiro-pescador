@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JOGO MÍNIMO</title>
+    <style>
+        body { margin: 0; padding: 0; background: #333; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { border: 3px solid gold; background: blue; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="900" height="750"></canvas>
+    
+    <script>
+        // CÓDIGO MÍNIMO
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Desenhar algo
+        ctx.fillStyle = 'red';
+        ctx.fillRect(400, 300, 100, 100);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = '30px Arial';
+        ctx.fillText('TESTE', 400, 250);
+        
+        console.log('Jogo mínimo funcionou!');
+    </script>
+</body>
+</html>

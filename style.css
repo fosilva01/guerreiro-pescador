@@ -1,9 +1,186 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
-    text-align: center;
-    background-color: lightblue;
+    background: linear-gradient(135deg, #0a2f44, #1b5a7a);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Arial', sans-serif;
+    padding: 15px;
+}
+
+#gameContainer {
+    background: #0a1f2e;
+    border-radius: 25px;
+    padding: 20px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+    border: 4px solid #4a90e2;
+    max-width: 1000px;
+    width: fit-content;
+    margin: 0 auto;
 }
 
 canvas {
-    background-color: green;
-    border: 3px solid black;
+    display: block;
+    margin: 0 auto;
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(74, 144, 226, 0.5);
+    background: #1a3f5a;
+    width: 100%;
+    height: auto;
+    border: 2px solid #ffd700;
+}
+
+#loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 25px 45px;
+    border-radius: 20px;
+    z-index: 10;
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+}
+
+#gameInfo {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(10, 31, 46, 0.95);
+    border-radius: 15px;
+    color: white;
+    text-align: center;
+    font-size: 14px;
+    border: 2px solid #4a90e2;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin-top: 10px;
+    color: #aaddff;
+    flex-wrap: wrap;
+}
+
+.control-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 5px 12px;
+    border-radius: 30px;
+    border: 1px solid #4a90e2;
+}
+
+.key {
+    background: #2c3e50;
+    border: 2px solid #ffd700;
+    border-radius: 10px;
+    padding: 5px 15px;
+    font-weight: bold;
+    color: #ffd700;
+    box-shadow: 0 5px 0 #1a3f5a;
+    font-size: 14px;
+    min-width: 50px;
+    text-align: center;
+}
+
+#recordDisplay {
+    margin-top: 15px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #98fb98;
+    text-shadow: 1px 1px 2px #000;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 20px;
+    border-radius: 30px;
+    display: inline-block;
+    border: 1px solid #ffd700;
+}
+
+.error {
+    color: #ff6b6b;
+    font-size: 13px;
+    margin-top: 10px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 5px 15px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.name-input-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+    border-radius: 15px;
+}
+
+.name-input-title {
+    color: #FFD700;
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 4px #000;
+}
+
+.name-input-box {
+    background: #333;
+    border: 3px solid #FFD700;
+    border-radius: 15px;
+    padding: 15px 30px;
+    width: 300px;
+    font-size: 24px;
+    color: white;
+    text-align: center;
+    margin-bottom: 20px;
+    outline: none;
+}
+
+.name-input-box:focus {
+    border-color: #FFA500;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.name-input-button {
+    background: #4CAF50;
+    border: none;
+    border-radius: 10px;
+    padding: 15px 40px;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid #FFD700;
+}
+
+.name-input-button:hover {
+    transform: scale(1.05);
+    background: #45a049;
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+}
+
+.name-input-info {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    margin-top: 20px;
 }
