@@ -74,42 +74,97 @@ document.addEventListener('DOMContentLoaded', function() {
     let ranking = [];
     let nomeJogadorAtual = "";
 
-    // Detecção de dispositivo
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    // ========== DETECÇÃO DE DISPOSITIVO ==========
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 1024;
+    let currentOrientation = window.innerHeight > window.innerWidth ? 'portrait' : 'landscape';
 
-    // ========== FUNÇÕES RESPONSIVAS ==========
-    function getTamanhoResponsivo() {
+    // ========== FUNÇÕES RESPONSIVAS AVANÇADAS ==========
+    function getDimensoesCanvas() {
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+        
+        // Canvas base (tamanho original do jogo)
         const baseWidth = 900;
         const baseHeight = 550;
-        const container = gameContainer;
         
-        if (!container) return { width: baseWidth, height: baseHeight, scale: 1 };
+        if (!isMobile) {
+            // Web - manter tamanho original
+            return {
+                width: baseWidth,
+                height: baseHeight,
+                scale: 1,
+                offsetX: 0,
+                offsetY: 0
+            };
+        }
         
-        const containerWidth = container.clientWidth - 30; // desconta padding
-        const scale = Math.min(containerWidth / baseWidth, 1);
+        // Mobile - calcular escala para preencher a tela
+        const containerAspect = containerWidth / containerHeight;
+        const baseAspect = baseWidth / baseHeight;
+        
+        let scale, drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+        
+        if (containerAspect > baseAspect) {
+            // Tela mais larga que o canvas - ajustar por altura
+            scale = containerHeight / baseHeight;
+            drawWidth = baseWidth * scale;
+            drawHeight = containerHeight;
+            offsetX = (containerWidth - drawWidth) / 2;
+        } else {
+            // Tela mais alta que o canvas - ajustar por largura
+            scale = containerWidth / baseWidth;
+            drawWidth = containerWidth;
+            drawHeight = baseHeight * scale;
+            offsetY = (containerHeight - drawHeight) / 2;
+        }
+        
+        // Limitar escala mínima e máxima
+        scale = Math.min(Math.max(scale, 0.5), 1.2);
         
         return {
             width: baseWidth,
             height: baseHeight,
             scale: scale,
             scaledWidth: baseWidth * scale,
-            scaledHeight: baseHeight * scale
+            scaledHeight: baseHeight * scale,
+            offsetX: offsetX,
+            offsetY: offsetY,
+            containerWidth: containerWidth,
+            containerHeight: containerHeight
         };
     }
 
     function getTamanhoBotaoResponsivo() {
-        const scale = getTamanhoResponsivo().scale;
+        const dim = getDimensoesCanvas();
+        const baseScale = dim.scale;
         
         if (isMobile) {
-            return {
-                largura: Math.min(220 * scale, 200),
-                altura: Math.min(60 * scale, 55),
-                espacamento: Math.min(20 * scale, 18),
-                deslocamentoY: Math.min(50 * scale, 45),
-                fontSize: Math.min(28 * scale, 24),
-                bordaRaio: Math.min(30 * scale, 25)
-            };
+            // Mobile - botões proporcionais à tela
+            const orientacao = currentOrientation;
+            
+            if (orientacao === 'portrait') {
+                // Modo retrato - botões menores e mais abaixo
+                return {
+                    largura: Math.min(200, 180 * baseScale),
+                    altura: Math.min(55, 50 * baseScale),
+                    espacamento: Math.min(18, 15 * baseScale),
+                    deslocamentoY: Math.min(60, 80 * baseScale),
+                    fontSize: Math.min(24, 22 * baseScale),
+                    bordaRaio: Math.min(25, 20 * baseScale)
+                };
+            } else {
+                // Modo paisagem - botões um pouco maiores
+                return {
+                    largura: Math.min(220, 200 * baseScale),
+                    altura: Math.min(60, 55 * baseScale),
+                    espacamento: Math.min(20, 18 * baseScale),
+                    deslocamentoY: Math.min(40, 50 * baseScale),
+                    fontSize: Math.min(28, 24 * baseScale),
+                    bordaRaio: Math.min(30, 25 * baseScale)
+                };
+            }
         } else {
+            // Web - tamanhos fixos
             return {
                 largura: 220,
                 altura: 60,
@@ -121,161 +176,101 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ========== RANKING ==========
-    function carregarRanking() {
-        try {
-            const savedHighScore = localStorage.getItem('ribeirinho_highScore');
-            highScore = savedHighScore ? parseInt(savedHighScore) : 0;
-            const savedRanking = localStorage.getItem('ribeirinho_ranking');
-            ranking = savedRanking ? JSON.parse(savedRanking) : [];
-            ranking.sort((a, b) => b.pontuacao - a.pontuacao);
-            atualizarRecordDisplay();
-        } catch (e) {
-            highScore = 0;
-            ranking = [];
-        }
+    function getTamanhoTouchButtons() {
+        if (!isMobile) return {};
+        
+        const dim = getDimensoesCanvas();
+        const baseScale = dim.scale;
+        
+        return {
+            tamanho: Math.max(50, Math.min(70, 60 * baseScale)),
+            fontSize: Math.max(24, Math.min(32, 28 * baseScale)),
+            bottomOffset: Math.max(10, Math.min(20, 15 * baseScale))
+        };
     }
-    
-    function salvarRanking() {
-        try {
-            ranking.sort((a, b) => b.pontuacao - a.pontuacao);
-            if (ranking.length > 10) ranking = ranking.slice(0, 10);
-            localStorage.setItem('ribeirinho_ranking', JSON.stringify(ranking));
-            if (ranking.length > 0) {
-                highScore = ranking[0].pontuacao;
-                localStorage.setItem('ribeirinho_highScore', highScore.toString());
-            }
-            atualizarRecordDisplay();
-        } catch (e) {}
-    }
-    
-    function adicionarAoRanking(nome, pontuacao) {
-        if (!nome || pontuacao <= 0) return false;
-        const indexExistente = ranking.findIndex(j => j.nome === nome);
-        if (indexExistente !== -1) {
-            if (pontuacao > ranking[indexExistente].pontuacao) {
-                ranking[indexExistente].pontuacao = pontuacao;
-                ranking[indexExistente].data = new Date().toLocaleDateString();
-            }
-        } else {
-            ranking.push({ nome: nome, pontuacao: pontuacao, data: new Date().toLocaleDateString() });
-        }
-        salvarRanking();
-        return true;
-    }
-
-    function atualizarRecordDisplay() {
-        if (recordDisplay) {
-            recordDisplay.innerHTML = `🎯 Meta: ${CONFIG.PEIXES_PARA_PROXIMA_FASE} peixes | 🏆 Recorde: ${highScore}`;
-        }
-    }
-
-    // Controle de som
-    let somMovimentoTocando = false;
-    let ultimaPosicao = { x: 450, y: 275 };
-
-    // Cursor
-    let mouseX = canvas.width / 2;
-    let mouseY = canvas.height / 2;
-    let mouseNoCanvas = false;
-
-    // Partículas
-    let particulas = [];
-
-    // Arrays de inimigos e itens
-    let jacares = [];
-    let inimigos = [];
-    let peixes = [];
-    let keys = {};
-
-    // ========== PLAYER ==========
-    let player = {
-        x: 450,
-        y: 275,
-        size: 70,
-        baseSpeed: 5,
-        speed: 5,
-        respawnX: 450,
-        respawnY: 275,
-        invulneravel: false,
-        collisionPercent: 0.8,
-        paralisado: false
-    };
-
-    // ========== PEIXE ELÉTRICO ==========
-    let peixeEletrico = {
-        x: 0,
-        y: 0,
-        width: 70,
-        height: 55,
-        ativo: false,
-        velocidade: 1.2,
-        direcao: { x: 1, y: 0.2 },
-        direcaoAnterior: { x: 1, y: 0.2 },
-        angulo: 0,
-        velocidadeAngular: 0.01,
-        tempoMudancaDirecao: 0,
-        tempoMudancaDirecaoMax: 180,
-        cor: '#FFFF00',
-        tempoChoque: 0,
-        tempoChoqueMax: 150,
-        tempoVida: 0,
-        ondulacao: 0,
-        velocidadeOndulacao: 0.02,
-        movimentoSuave: { x: 0, y: 0, inercia: 0.92 },
-        normalizarDirecao: function() {
-            const mag = Math.sqrt(this.direcao.x * this.direcao.x + this.direcao.y * this.direcao.y);
-            if (mag > 0) {
-                this.direcao.x /= mag;
-                this.direcao.y /= mag;
-            }
-        }
-    };
-
-    // ========== CONTROLES TOUCH ==========
-    let touchActive = { up: false, down: false, left: false, right: false };
-    let touchInterval = null;
-
-    // Vibração
-    let vibracaoAtiva = false;
-    let vibracaoTimer = 0;
 
     // ========== FUNÇÃO DE ORIENTAÇÃO ==========
     function checkOrientation() {
-        if (!orientationMsg) return;
+        if (!orientationMsg || !gameContainer || !touchControls) return;
         
-        if (isMobile && window.innerHeight > window.innerWidth) {
-            orientationMsg.style.display = 'flex';
-            if (gameContainer) gameContainer.style.display = 'none';
-            if (touchControls) touchControls.style.display = 'none';
+        const wasPortrait = currentOrientation === 'portrait';
+        currentOrientation = window.innerHeight > window.innerWidth ? 'portrait' : 'landscape';
+        
+        if (isMobile) {
+            if (currentOrientation === 'portrait') {
+                // Modo retrato - mostrar mensagem e esconder jogo
+                orientationMsg.style.display = 'flex';
+                gameContainer.style.display = 'none';
+                touchControls.style.display = 'none';
+                
+                // Ajustar mensagem para o modo retrato
+                orientationMsg.innerHTML = '<div>📱 Por favor, gire o dispositivo para o modo paisagem</div>';
+            } else {
+                // Modo paisagem - mostrar jogo
+                orientationMsg.style.display = 'none';
+                gameContainer.style.display = 'block';
+                touchControls.style.display = 'flex';
+                ajustarCanvasParaMobile();
+                
+                // Ajustar tamanho dos botões touch
+                const touchSize = getTamanhoTouchButtons();
+                const touchButtons = document.querySelectorAll('.touch-btn');
+                touchButtons.forEach(btn => {
+                    btn.style.width = `${touchSize.tamanho}px`;
+                    btn.style.height = `${touchSize.tamanho}px`;
+                    btn.style.fontSize = `${touchSize.fontSize}px`;
+                    btn.style.margin = '0 5px';
+                });
+            }
         } else {
+            // Web - sempre mostrar
             orientationMsg.style.display = 'none';
-            if (gameContainer) gameContainer.style.display = 'block';
-            if (isMobile && touchControls) touchControls.style.display = 'flex';
-            ajustarCanvasParaMobile();
+            gameContainer.style.display = 'block';
+            touchControls.style.display = 'none';
         }
     }
 
     function ajustarCanvasParaMobile() {
-        if (!canvas) return;
+        if (!canvas || !gameContainer) return;
         
-        const responsivo = getTamanhoResponsivo();
+        const dim = getDimensoesCanvas();
         
-        canvas.style.width = `${responsivo.scaledWidth}px`;
-        canvas.style.height = `${responsivo.scaledHeight}px`;
+        // Ajustar canvas
+        canvas.style.width = `${dim.scaledWidth}px`;
+        canvas.style.height = `${dim.scaledHeight}px`;
         canvas.style.maxWidth = '100%';
         canvas.style.maxHeight = '100%';
+        canvas.style.margin = '0 auto';
         
-        // Ajustar tamanho do player baseado na escala
-        if (responsivo.scale < 1) {
-            player.size = Math.max(40, Math.floor(70 * responsivo.scale));
-            player.baseSpeed = Math.max(3, Math.floor(5 * responsivo.scale));
+        // Ajustar container do jogo
+        gameContainer.style.width = '100%';
+        gameContainer.style.height = '100%';
+        gameContainer.style.display = 'flex';
+        gameContainer.style.flexDirection = 'column';
+        gameContainer.style.justifyContent = 'center';
+        gameContainer.style.alignItems = 'center';
+        gameContainer.style.padding = isMobile ? '5px' : '15px';
+        
+        // Ajustar elementos do jogo baseado na escala
+        if (dim.scale < 1) {
+            player.size = Math.max(35, Math.min(60, Math.floor(70 * dim.scale)));
+            player.baseSpeed = Math.max(2, Math.min(4, Math.floor(5 * dim.scale)));
             player.speed = player.baseSpeed;
-            player.respawnX = canvas.width / 2 - player.size / 2;
-            player.respawnY = canvas.height / 2 - player.size / 2;
+            player.respawnX = (canvas.width / 2) - (player.size / 2);
+            player.respawnY = (canvas.height / 2) - (player.size / 2);
             
-            peixeEletrico.width = Math.max(40, Math.floor(70 * responsivo.scale));
-            peixeEletrico.height = Math.max(30, Math.floor(55 * responsivo.scale));
+            peixeEletrico.width = Math.max(35, Math.min(60, Math.floor(70 * dim.scale)));
+            peixeEletrico.height = Math.max(28, Math.min(45, Math.floor(55 * dim.scale)));
+        }
+        
+        // Ajustar faseDisplay
+        if (phaseDisplay) {
+            phaseDisplay.style.fontSize = isMobile ? `${16 * dim.scale}px` : '18px';
+        }
+        
+        // Ajustar recordDisplay
+        if (recordDisplay) {
+            recordDisplay.style.fontSize = isMobile ? `${14 * dim.scale}px` : '16px';
         }
     }
 
@@ -287,12 +282,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getCanvasCoordenadas(clientX, clientY) {
         const rect = canvas.getBoundingClientRect();
+        const dim = getDimensoesCanvas();
+        
+        // Ajustar coordenadas considerando o offset do canvas centralizado
+        const relativeX = clientX - rect.left;
+        const relativeY = clientY - rect.top;
+        
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        let x = (clientX - rect.left) * scaleX;
-        let y = (clientY - rect.top) * scaleY;
+        
+        let x = relativeX * scaleX;
+        let y = relativeY * scaleY;
+        
         x = Math.max(0, Math.min(canvas.width, x));
         y = Math.max(0, Math.min(canvas.height, y));
+        
         return { x, y };
     }
 
@@ -469,8 +473,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarParticulas(x, y, cor, quantidade = 10) {
-        const scale = getTamanhoResponsivo().scale;
-        const tamanhoBase = Math.max(2, Math.floor(4 * scale));
+        const dim = getDimensoesCanvas();
+        const scale = dim.scale;
+        const tamanhoBase = Math.max(2, Math.min(6, 4 * scale));
         
         for (let i = 0; i < quantidade; i++) {
             particulas.push({ 
@@ -501,11 +506,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarCoracao() {
-        const scale = getTamanhoResponsivo().scale;
+        const dim = getDimensoesCanvas();
+        const scale = dim.scale;
         return { 
             x: Math.random() * (canvas.width - 40 * scale), 
             y: Math.random() * (canvas.height - 40 * scale), 
-            size: Math.max(30, Math.floor(45 * scale)), 
+            size: Math.max(25, Math.min(45, Math.floor(45 * scale))), 
             tempoVida: CONFIG.VIDA_EXTRA_TEMPO_VIDA, 
             oscilacao: Math.random() * Math.PI * 10, 
             ativo: true 
@@ -513,11 +519,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarCamarao() {
-        const scale = getTamanhoResponsivo().scale;
+        const dim = getDimensoesCanvas();
+        const scale = dim.scale;
         return { 
             x: Math.random() * (canvas.width - 45 * scale), 
             y: Math.random() * (canvas.height - 45 * scale), 
-            size: Math.max(30, Math.floor(45 * scale)), 
+            size: Math.max(25, Math.min(45, Math.floor(45 * scale))), 
             tempoVida: CONFIG.CAMARAO_TEMPO_VIDA, 
             oscilacao: Math.random() * Math.PI * 10, 
             rotacao: 0, 
@@ -526,12 +533,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarJacareSimples(config) {
-        const scale = getTamanhoResponsivo().scale;
+        const dim = getDimensoesCanvas();
+        const scale = dim.scale;
         return { 
             x: Math.random() * (canvas.width - 90 * scale), 
             y: Math.random() * (canvas.height - 45 * scale), 
-            width: Math.max(50, Math.floor(90 * scale)), 
-            height: Math.max(25, Math.floor(45 * scale)), 
+            width: Math.max(40, Math.min(80, Math.floor(90 * scale))), 
+            height: Math.max(20, Math.min(40, Math.floor(45 * scale))), 
             speed: config.velocidadeJacare * scale, 
             direcaoX: 1, 
             ativo: true, 
@@ -545,12 +553,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarBoto(config) {
-        const scale = getTamanhoResponsivo().scale;
+        const dim = getDimensoesCanvas();
+        const scale = dim.scale;
         return { 
             x: Math.random() * (canvas.width - 85 * scale), 
             y: Math.random() * (canvas.height - 45 * scale), 
-            width: Math.max(50, Math.floor(85 * scale)), 
-            height: Math.max(25, Math.floor(45 * scale)), 
+            width: Math.max(40, Math.min(75, Math.floor(85 * scale))), 
+            height: Math.max(20, Math.min(40, Math.floor(45 * scale))), 
             ativo: true, 
             tipo: TIPOS_INIMIGO.BOTO, 
             speed: 0, 
@@ -768,68 +777,65 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function desenharRanking() {
+        const dim = getDimensoesCanvas();
+        const scale = dim.scale;
+        
         ctx.fillStyle = "rgba(0, 20, 40, 0.98)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.shadowColor = '#FFD700';
         ctx.shadowBlur = 20;
         
-        const scale = getTamanhoResponsivo().scale;
-        const fontSizeTitulo = isMobile ? Math.min(40, 56 * scale) : 56;
-        const fontSizePos = isMobile ? Math.min(18, 24 * scale) : 24;
-        const fontSizeJogador = isMobile ? Math.min(16, 22 * scale) : 22;
-        const fontSizePontuacao = isMobile ? Math.min(16, 22 * scale) : 22;
+        const fontSizeTitulo = isMobile ? Math.min(36, 48 * scale) : 56;
+        const fontSizePos = isMobile ? Math.min(16, 20 * scale) : 24;
+        const fontSizeJogador = isMobile ? Math.min(14, 18 * scale) : 22;
+        const fontSizePontuacao = isMobile ? Math.min(14, 18 * scale) : 22;
         
         ctx.font = `bold ${fontSizeTitulo}px Arial`;
         ctx.fillStyle = '#FFD700';
         ctx.textAlign = "center";
-        ctx.fillText('🏆 RANKING 🏆', canvas.width / 2, 100 * scale);
+        ctx.fillText('🏆 RANKING 🏆', canvas.width / 2, 80 * scale);
         ctx.shadowBlur = 0;
         
         carregarRanking();
         
         if (ranking.length === 0) {
-            ctx.font = `bold ${32 * scale}px Arial`;
+            ctx.font = `bold ${28 * scale}px Arial`;
             ctx.fillStyle = '#FFFFFF';
-            ctx.fillText('Nenhum registro ainda!', canvas.width / 2, 300 * scale);
-            ctx.font = `${24 * scale}px Arial`;
+            ctx.fillText('Nenhum registro ainda!', canvas.width / 2, 250 * scale);
+            ctx.font = `${20 * scale}px Arial`;
             ctx.fillStyle = '#98FB98';
-            ctx.fillText('Jogue e faça sua melhor pontuação!', canvas.width / 2, 380 * scale);
+            ctx.fillText('Jogue e faça sua melhor pontuação!', canvas.width / 2, 320 * scale);
         } else {
             ctx.font = `bold ${fontSizePos}px Arial`;
             ctx.fillStyle = '#FFD700';
-            ctx.fillText('POS', canvas.width / 2 - 200 * scale, 180 * scale);
-            ctx.fillText('JOGADOR', canvas.width / 2 - 50 * scale, 180 * scale);
-            ctx.fillText('PEIXES', canvas.width / 2 + 150 * scale, 180 * scale);
+            ctx.fillText('POS', canvas.width / 2 - 180 * scale, 150 * scale);
+            ctx.fillText('JOGADOR', canvas.width / 2 - 40 * scale, 150 * scale);
+            ctx.fillText('PEIXES', canvas.width / 2 + 130 * scale, 150 * scale);
             
             ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(canvas.width / 2 - 250 * scale, 200 * scale);
-            ctx.lineTo(canvas.width / 2 + 250 * scale, 200 * scale);
+            ctx.moveTo(canvas.width / 2 - 220 * scale, 170 * scale);
+            ctx.lineTo(canvas.width / 2 + 220 * scale, 170 * scale);
             ctx.stroke();
             
-            for (let i = 0; i < ranking.length; i++) {
-                const y = 250 * scale + i * 55 * scale;
+            for (let i = 0; i < Math.min(ranking.length, 8); i++) {
+                const y = 200 * scale + i * 45 * scale;
                 let medalha = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}º`;
                 const corTexto = (ranking[i].nome === nomeJogadorAtual) ? '#FFD700' : '#FFFFFF';
                 
                 ctx.font = `bold ${fontSizeJogador}px Arial`;
                 ctx.fillStyle = '#FFD700';
-                ctx.fillText(medalha, canvas.width / 2 - 200 * scale, y);
+                ctx.fillText(medalha, canvas.width / 2 - 180 * scale, y);
                 
-                ctx.font = `${20 * scale}px Arial`;
+                ctx.font = `${16 * scale}px Arial`;
                 ctx.fillStyle = corTexto;
-                ctx.fillText(ranking[i].nome, canvas.width / 2 - 50 * scale, y);
+                let nome = ranking[i].nome.length > 10 ? ranking[i].nome.substring(0, 8) + '...' : ranking[i].nome;
+                ctx.fillText(nome, canvas.width / 2 - 40 * scale, y);
                 
                 ctx.font = `bold ${fontSizePontuacao}px Arial`;
                 ctx.fillStyle = '#98FB98';
-                ctx.fillText(ranking[i].pontuacao.toString(), canvas.width / 2 + 150 * scale, y);
-                
-                if (ranking[i].data) {
-                    ctx.font = `${12 * scale}px Arial`;
-                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.fillText(ranking[i].data, canvas.width / 2 + 220 * scale, y - 5);
-                }
+                ctx.fillText(ranking[i].pontuacao.toString(), canvas.width / 2 + 130 * scale, y);
             }
         }
         
@@ -837,15 +843,18 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.shadowBlur = 10;
         ctx.fillStyle = '#4CAF50';
         ctx.beginPath();
-        roundRect(ctx, canvas.width / 2 - 120 * scale, 550 * scale, 240 * scale, 60 * scale, 30 * scale).fill();
+        roundRect(ctx, canvas.width / 2 - 100 * scale, 500 * scale, 200 * scale, 50 * scale, 25 * scale).fill();
         ctx.shadowBlur = 5;
-        ctx.font = `bold ${28 * scale}px Arial`;
+        ctx.font = `bold ${24 * scale}px Arial`;
         ctx.fillStyle = '#FFF';
-        ctx.fillText('VOLTAR', canvas.width / 2, 585 * scale);
+        ctx.fillText('VOLTAR', canvas.width / 2, 525 * scale);
         ctx.shadowBlur = 0;
-        ctx.font = `${18 * scale}px Arial`;
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillText('Pressione R para voltar', canvas.width / 2, 630 * scale);
+        
+        if (!isMobile) {
+            ctx.font = `${16 * scale}px Arial`;
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.fillText('Pressione R para voltar', canvas.width / 2, 580 * scale);
+        }
     }
 
     function roundRect(ctx, x, y, w, h, r) {
@@ -954,34 +963,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function desenharMensagemVitoriaFase() {
-        const scale = getTamanhoResponsivo().scale;
+        const dim = getDimensoesCanvas();
+        const scale = dim.scale;
         
         ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.shadowColor = '#FFD700';
         ctx.shadowBlur = 30;
         
-        ctx.font = `bold ${64 * scale}px Arial`;
-        ctx.fillStyle = '#FFD700';
-        ctx.fillText('✨ VITÓRIA! ✨', canvas.width / 2, canvas.height / 2 - 80 * scale);
-        
         ctx.font = `bold ${48 * scale}px Arial`;
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('✨ VITÓRIA! ✨', canvas.width / 2, canvas.height / 2 - 60 * scale);
+        
+        ctx.font = `bold ${36 * scale}px Arial`;
         ctx.fillStyle = '#98FB98';
         ctx.fillText(`FASE ${faseVitoriosa} CONCLUÍDA!`, canvas.width / 2, canvas.height / 2);
         
-        ctx.font = `bold ${24 * scale}px Arial`;
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(`Peixes: ${peixesPescados}`, canvas.width / 2, canvas.height / 2 + 60 * scale);
-        
         ctx.font = `bold ${20 * scale}px Arial`;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(`Peixes: ${peixesPescados}`, canvas.width / 2, canvas.height / 2 + 50 * scale);
+        
+        ctx.font = `bold ${18 * scale}px Arial`;
         ctx.fillStyle = '#FFD700';
-        ctx.fillText('Preparando próxima fase...', canvas.width / 2, canvas.height / 2 + 120 * scale);
+        ctx.fillText('Preparando próxima fase...', canvas.width / 2, canvas.height / 2 + 100 * scale);
         
         ctx.shadowBlur = 0;
     }
 
     function desenharElementosJogo() {
-        const scale = getTamanhoResponsivo().scale;
+        const dim = getDimensoesCanvas();
+        const scale = dim.scale;
         
         if (vibracaoAtiva) {
             ctx.save();
@@ -1001,32 +1012,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (vibracaoAtiva) ctx.restore();
         
         ctx.fillStyle = "white";
-        ctx.font = `bold ${18 * scale}px Arial`;
-        ctx.fillText(`🐟 ${peixesPescados}`, 25 * scale, 30 * scale);
-        ctx.fillText(`❤️ ${vidas}`, 100 * scale, 30 * scale);
-        ctx.fillText(`🌊 ${faseAtual}/${CONFIG.MAX_FASE}`, 175 * scale, 30 * scale);
+        ctx.font = `bold ${Math.max(12, 16 * scale)}px Arial`;
+        ctx.fillText(`🐟 ${peixesPescados}`, 15 * scale, 25 * scale);
+        ctx.fillText(`❤️ ${vidas}`, 80 * scale, 25 * scale);
+        ctx.fillText(`🌊 ${faseAtual}/${CONFIG.MAX_FASE}`, 140 * scale, 25 * scale);
         
         const progresso = peixesNestaFase / CONFIG.PEIXES_PARA_PROXIMA_FASE;
         ctx.fillStyle = "rgba(255,255,255,0.3)";
-        ctx.fillRect(250 * scale, 20 * scale, 100 * scale, 15 * scale);
+        ctx.fillRect(200 * scale, 15 * scale, 80 * scale, 12 * scale);
         ctx.fillStyle = "#4CAF50";
-        ctx.fillRect(250 * scale, 20 * scale, 100 * scale * Math.min(progresso, 1), 15 * scale);
+        ctx.fillRect(200 * scale, 15 * scale, 80 * scale * Math.min(progresso, 1), 12 * scale);
         ctx.strokeStyle = "#FFD700";
-        ctx.strokeRect(250 * scale, 20 * scale, 100 * scale, 15 * scale);
+        ctx.strokeRect(200 * scale, 15 * scale, 80 * scale, 12 * scale);
         
         if (player.paralisado) {
             ctx.fillStyle = "#FFFF00";
-            ctx.font = `bold ${16 * scale}px Arial`;
-            ctx.fillText(`⚡ PARALISADO ${Math.ceil(peixeEletrico.tempoChoque / 60)}s`, 25 * scale, 60 * scale);
+            ctx.font = `bold ${14 * scale}px Arial`;
+            ctx.fillText(`⚡ PARALISADO ${Math.ceil(peixeEletrico.tempoChoque / 60)}s`, 20 * scale, 50 * scale);
         }
         if (powerUpAtivo) {
             ctx.fillStyle = "#FFA500";
-            ctx.font = `bold ${14 * scale}px Arial`;
-            ctx.fillText(`🦐 ${(powerUpTempoRestante / 1000).toFixed(1)}s`, 360 * scale, 30 * scale);
+            ctx.font = `bold ${12 * scale}px Arial`;
+            ctx.fillText(`🦐 ${(powerUpTempoRestante / 1000).toFixed(1)}s`, 300 * scale, 25 * scale);
         }
         if (faseAguardando && contagemRegressiva > 0) {
             ctx.save();
-            ctx.font = `bold ${120 * scale}px Arial`;
+            ctx.font = `bold ${80 * scale}px Arial`;
             ctx.fillStyle = "#FFD700";
             ctx.fillText(contagemRegressiva.toString(), canvas.width / 2, canvas.height / 2);
             ctx.restore();
@@ -1060,7 +1071,8 @@ document.addEventListener('DOMContentLoaded', function() {
         powerUpTempoRestante = 0;
         
         const config = getConfigFase(faseAtual);
-        const scale = getTamanhoResponsivo().scale;
+        const dim = getDimensoesCanvas();
+        const scale = dim.scale;
         
         jacares = [];
         for (let i = 0; i < config.qtdJacare; i++) jacares.push(criarJacareSimples(config));
@@ -1088,12 +1100,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         for (let i = 0; i < config.qtdPeixes; i++) {
             peixes.push({ 
-                x: Math.random() * (canvas.width - 40 * scale), 
-                y: Math.random() * (canvas.height - 30 * scale), 
-                width: Math.max(20, Math.floor(35 * scale)), 
-                height: Math.max(15, Math.floor(25 * scale)), 
+                x: Math.random() * (canvas.width - 35 * scale), 
+                y: Math.random() * (canvas.height - 25 * scale), 
+                width: Math.max(18, Math.min(30, Math.floor(30 * scale))), 
+                height: Math.max(12, Math.min(20, Math.floor(20 * scale))), 
                 pontos: 1, 
-                velocidade: 0.5 * scale, 
+                velocidade: 0.4 * scale, 
                 direcao: Math.random() > 0.5 ? 1 : -1, 
                 ativo: true, 
                 ondulacao: Math.random() * Math.PI * 2, 
@@ -1185,8 +1197,11 @@ document.addEventListener('DOMContentLoaded', function() {
         faseAguardando = true;
         contagemRegressiva = 3;
         
-        player.x = player.respawnX;
-        player.y = player.respawnY;
+        const dim = getDimensoesCanvas();
+        player.x = (canvas.width / 2) - (player.size / 2);
+        player.y = (canvas.height / 2) - (player.size / 2);
+        player.respawnX = player.x;
+        player.respawnY = player.y;
         player.speed = player.baseSpeed;
         player.invulneravel = true;
         player.paralisado = false;
@@ -1522,12 +1537,15 @@ document.addEventListener('DOMContentLoaded', function() {
         peixes = peixes.filter(p => p.ativo);
         const configAtual = getConfigFase(faseAtual);
         while (peixes.length < configAtual.qtdPeixes) {
+            const dim = getDimensoesCanvas();
+            const scale = dim.scale;
             peixes.push({ 
-                x: Math.random() * (canvas.width - 40), 
-                y: Math.random() * (canvas.height - 30), 
-                width: 35, height: 25, 
+                x: Math.random() * (canvas.width - 35 * scale), 
+                y: Math.random() * (canvas.height - 25 * scale), 
+                width: Math.max(18, Math.min(30, Math.floor(30 * scale))), 
+                height: Math.max(12, Math.min(20, Math.floor(20 * scale))), 
                 pontos: 1, 
-                velocidade: 0.5, 
+                velocidade: 0.4 * scale, 
                 direcao: Math.random() > 0.5 ? 1 : -1, 
                 ativo: true, 
                 ondulacao: Math.random() * Math.PI * 2, 
@@ -1547,20 +1565,26 @@ document.addEventListener('DOMContentLoaded', function() {
             if (estadoAtual === ESTADO.RANKING) {
                 desenharRanking();
             } else if (estadoAtual === ESTADO.GAME_OVER) {
+                const dim = getDimensoesCanvas();
+                const scale = dim.scale;
+                
                 ctx.fillStyle = "rgba(0,0,0,0.8)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                desenharTextoComBorda('GAME OVER', canvas.width / 2, 200, 64, '#FF4444', '#000');
-                desenharTextoComBorda(`Total: ${peixesPescados} peixes`, canvas.width / 2, 280, 36, '#FFF', '#000');
-                desenharTextoComBorda(`Fase alcançada: ${faseAtual}`, canvas.width / 2, 330, 24, '#FFD700', '#000');
-                desenharTextoComBorda('Pressione R para voltar', canvas.width / 2, 380, 22, '#FFD700', '#000');
+                desenharTextoComBorda('GAME OVER', canvas.width / 2, 150 * scale, 48 * scale, '#FF4444', '#000');
+                desenharTextoComBorda(`Total: ${peixesPescados} peixes`, canvas.width / 2, 220 * scale, 28 * scale, '#FFF', '#000');
+                desenharTextoComBorda(`Fase alcançada: ${faseAtual}`, canvas.width / 2, 270 * scale, 20 * scale, '#FFD700', '#000');
+                desenharTextoComBorda('Pressione R para voltar', canvas.width / 2, 320 * scale, 18 * scale, '#FFD700', '#000');
             } else if (estadoAtual === ESTADO.VITORIA) {
+                const dim = getDimensoesCanvas();
+                const scale = dim.scale;
+                
                 ctx.fillStyle = "rgba(0,0,0,0.9)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 desenharParticulas();
-                desenharTextoComBorda('🏆 CAMPEÃO! 🏆', canvas.width / 2, 180, 64, '#FFD700', '#000');
-                desenharTextoComBorda('VOCÊ VENCEU O JOGO!', canvas.width / 2, 260, 48, '#98FB98', '#000');
-                desenharTextoComBorda(`Total de peixes: ${peixesPescados}`, canvas.width / 2, 340, 36, '#FFF', '#000');
-                desenharTextoComBorda('Pressione R para voltar ao menu', canvas.width / 2, 420, 24, '#FFD700', '#000');
+                desenharTextoComBorda('🏆 CAMPEÃO! 🏆', canvas.width / 2, 130 * scale, 48 * scale, '#FFD700', '#000');
+                desenharTextoComBorda('VOCÊ VENCEU O JOGO!', canvas.width / 2, 200 * scale, 36 * scale, '#98FB98', '#000');
+                desenharTextoComBorda(`Total de peixes: ${peixesPescados}`, canvas.width / 2, 260 * scale, 28 * scale, '#FFF', '#000');
+                desenharTextoComBorda('Pressione R para voltar ao menu', canvas.width / 2, 320 * scale, 20 * scale, '#FFD700', '#000');
             } else if (estadoAtual === ESTADO.VITORIA_FASE) {
                 desenharElementosJogo();
                 desenharMensagemVitoriaFase();
@@ -1568,7 +1592,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 desenharElementosJogo();
                 ctx.fillStyle = "rgba(0,0,0,0.5)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                desenharTextoComBorda('PAUSADO', canvas.width / 2, canvas.height / 2, 64, '#FFF', '#000');
+                desenharTextoComBorda('PAUSADO', canvas.width / 2, canvas.height / 2, 48, '#FFF', '#000');
             } else {
                 desenharElementosJogo();
             }
@@ -1758,8 +1782,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 carregarRanking();
             }
         } else if (estadoAtual === ESTADO.RANKING) {
-            const scale = getTamanhoResponsivo().scale;
-            if (y > 550 * scale && y < 610 * scale) {
+            const dim = getDimensoesCanvas();
+            const scale = dim.scale;
+            if (y > 500 * scale && y < 550 * scale) {
                 estadoAtual = ESTADO.TELA_INICIAL;
             }
         }
@@ -1795,9 +1820,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 carregarRanking();
             }
         } else if (estadoAtual === ESTADO.RANKING) {
-            const scale = getTamanhoResponsivo().scale;
-            if (x >= canvas.width / 2 - 120 * scale && x <= canvas.width / 2 + 120 * scale && 
-                y >= 550 * scale && y <= 610 * scale) {
+            const dim = getDimensoesCanvas();
+            const scale = dim.scale;
+            if (x >= canvas.width / 2 - 100 * scale && x <= canvas.width / 2 + 100 * scale && 
+                y >= 500 * scale && y <= 550 * scale) {
                 estadoAtual = ESTADO.TELA_INICIAL;
             }
         }
@@ -1891,6 +1917,20 @@ document.addEventListener('DOMContentLoaded', function() {
         ajustarCanvasParaMobile();
         atualizarRecordDisplay();
         
+        // Ajustar CSS dos controles touch
+        if (isMobile && touchControls) {
+            touchControls.style.display = 'flex';
+            touchControls.style.flexWrap = 'wrap';
+            touchControls.style.justifyContent = 'center';
+            touchControls.style.gap = '8px';
+            touchControls.style.padding = '5px';
+            touchControls.style.position = 'fixed';
+            touchControls.style.bottom = '10px';
+            touchControls.style.left = '0';
+            touchControls.style.right = '0';
+            touchControls.style.zIndex = '1000';
+        }
+        
         setTimeout(() => {
             if (!jogoPronto) {
                 jogoPronto = true;
@@ -1908,8 +1948,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Recalcular posições do player se necessário
         if (estadoAtual === ESTADO.JOGANDO) {
-            player.respawnX = canvas.width / 2 - player.size / 2;
-            player.respawnY = canvas.height / 2 - player.size / 2;
+            const dim = getDimensoesCanvas();
+            player.respawnX = (canvas.width / 2) - (player.size / 2);
+            player.respawnY = (canvas.height / 2) - (player.size / 2);
         }
     });
     
@@ -1917,6 +1958,13 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             checkOrientation();
             ajustarCanvasParaMobile();
+            
+            // Forçar redesenho
+            if (estadoAtual === ESTADO.JOGANDO) {
+                const dim = getDimensoesCanvas();
+                player.respawnX = (canvas.width / 2) - (player.size / 2);
+                player.respawnY = (canvas.height / 2) - (player.size / 2);
+            }
         }, 100);
     });
 
