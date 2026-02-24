@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const gameContainer = document.getElementById("gameContainer");
     const orientationMsg = document.getElementById("orientationMessage");
     const recordDisplay = document.getElementById("recordDisplay");
+    const touchControls = document.getElementById("touchControls");
 
     // ========== CONSTANTES DO JOGO ==========
     const ESTADO = {
@@ -73,7 +74,54 @@ document.addEventListener('DOMContentLoaded', function() {
     let ranking = [];
     let nomeJogadorAtual = "";
 
-    // Carregar ranking do localStorage
+    // Detecção de dispositivo
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+    // ========== FUNÇÕES RESPONSIVAS ==========
+    function getTamanhoResponsivo() {
+        const baseWidth = 900;
+        const baseHeight = 550;
+        const container = gameContainer;
+        
+        if (!container) return { width: baseWidth, height: baseHeight, scale: 1 };
+        
+        const containerWidth = container.clientWidth - 30; // desconta padding
+        const scale = Math.min(containerWidth / baseWidth, 1);
+        
+        return {
+            width: baseWidth,
+            height: baseHeight,
+            scale: scale,
+            scaledWidth: baseWidth * scale,
+            scaledHeight: baseHeight * scale
+        };
+    }
+
+    function getTamanhoBotaoResponsivo() {
+        const scale = getTamanhoResponsivo().scale;
+        
+        if (isMobile) {
+            return {
+                largura: Math.min(220 * scale, 200),
+                altura: Math.min(60 * scale, 55),
+                espacamento: Math.min(20 * scale, 18),
+                deslocamentoY: Math.min(50 * scale, 45),
+                fontSize: Math.min(28 * scale, 24),
+                bordaRaio: Math.min(30 * scale, 25)
+            };
+        } else {
+            return {
+                largura: 220,
+                altura: 60,
+                espacamento: 20,
+                deslocamentoY: 50,
+                fontSize: 28,
+                bordaRaio: 30
+            };
+        }
+    }
+
+    // ========== RANKING ==========
     function carregarRanking() {
         try {
             const savedHighScore = localStorage.getItem('ribeirinho_highScore');
@@ -187,7 +235,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========== CONTROLES TOUCH ==========
     let touchActive = { up: false, down: false, left: false, right: false };
     let touchInterval = null;
-    let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     // Vibração
     let vibracaoAtiva = false;
@@ -200,26 +247,36 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isMobile && window.innerHeight > window.innerWidth) {
             orientationMsg.style.display = 'flex';
             if (gameContainer) gameContainer.style.display = 'none';
+            if (touchControls) touchControls.style.display = 'none';
         } else {
             orientationMsg.style.display = 'none';
             if (gameContainer) gameContainer.style.display = 'block';
+            if (isMobile && touchControls) touchControls.style.display = 'flex';
             ajustarCanvasParaMobile();
         }
     }
 
     function ajustarCanvasParaMobile() {
-        if (!isMobile || !canvas) return;
-        const container = document.getElementById('gameContainer');
-        if (!container) return;
+        if (!canvas) return;
         
-        const maxWidth = window.innerWidth - 20;
-        const maxHeight = window.innerHeight - 150;
-        const ratio = Math.min(maxWidth / 900, maxHeight / 750);
-        const newWidth = 900 * ratio;
-        const newHeight = 750 * ratio;
+        const responsivo = getTamanhoResponsivo();
         
-        canvas.style.width = `${newWidth}px`;
-        canvas.style.height = `${newHeight}px`;
+        canvas.style.width = `${responsivo.scaledWidth}px`;
+        canvas.style.height = `${responsivo.scaledHeight}px`;
+        canvas.style.maxWidth = '100%';
+        canvas.style.maxHeight = '100%';
+        
+        // Ajustar tamanho do player baseado na escala
+        if (responsivo.scale < 1) {
+            player.size = Math.max(40, Math.floor(70 * responsivo.scale));
+            player.baseSpeed = Math.max(3, Math.floor(5 * responsivo.scale));
+            player.speed = player.baseSpeed;
+            player.respawnX = canvas.width / 2 - player.size / 2;
+            player.respawnY = canvas.height / 2 - player.size / 2;
+            
+            peixeEletrico.width = Math.max(40, Math.floor(70 * responsivo.scale));
+            peixeEletrico.height = Math.max(30, Math.floor(55 * responsivo.scale));
+        }
     }
 
     function vibrar(duracao = 20) {
@@ -412,15 +469,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarParticulas(x, y, cor, quantidade = 10) {
+        const scale = getTamanhoResponsivo().scale;
+        const tamanhoBase = Math.max(2, Math.floor(4 * scale));
+        
         for (let i = 0; i < quantidade; i++) {
             particulas.push({ 
                 x: x, 
                 y: y, 
-                vx: (Math.random() - 0.5) * 6, 
-                vy: (Math.random() - 0.5) * 6, 
+                vx: (Math.random() - 0.5) * 6 * scale, 
+                vy: (Math.random() - 0.5) * 6 * scale, 
                 vida: 30, 
                 cor: cor, 
-                tamanho: Math.random() * 4 + 2 
+                tamanho: Math.random() * tamanhoBase + 2 
             });
         }
     }
@@ -441,10 +501,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarCoracao() {
+        const scale = getTamanhoResponsivo().scale;
         return { 
-            x: Math.random() * (canvas.width - 40), 
-            y: Math.random() * (canvas.height - 40), 
-            size: 45, 
+            x: Math.random() * (canvas.width - 40 * scale), 
+            y: Math.random() * (canvas.height - 40 * scale), 
+            size: Math.max(30, Math.floor(45 * scale)), 
             tempoVida: CONFIG.VIDA_EXTRA_TEMPO_VIDA, 
             oscilacao: Math.random() * Math.PI * 10, 
             ativo: true 
@@ -452,10 +513,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarCamarao() {
+        const scale = getTamanhoResponsivo().scale;
         return { 
-            x: Math.random() * (canvas.width - 45), 
-            y: Math.random() * (canvas.height - 45), 
-            size: 45, 
+            x: Math.random() * (canvas.width - 45 * scale), 
+            y: Math.random() * (canvas.height - 45 * scale), 
+            size: Math.max(30, Math.floor(45 * scale)), 
             tempoVida: CONFIG.CAMARAO_TEMPO_VIDA, 
             oscilacao: Math.random() * Math.PI * 10, 
             rotacao: 0, 
@@ -464,12 +526,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarJacareSimples(config) {
+        const scale = getTamanhoResponsivo().scale;
         return { 
-            x: Math.random() * (canvas.width - 90), 
-            y: Math.random() * (canvas.height - 45), 
-            width: 90, 
-            height: 45, 
-            speed: config.velocidadeJacare, 
+            x: Math.random() * (canvas.width - 90 * scale), 
+            y: Math.random() * (canvas.height - 45 * scale), 
+            width: Math.max(50, Math.floor(90 * scale)), 
+            height: Math.max(25, Math.floor(45 * scale)), 
+            speed: config.velocidadeJacare * scale, 
             direcaoX: 1, 
             ativo: true, 
             surgindo: true, 
@@ -482,11 +545,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function criarBoto(config) {
+        const scale = getTamanhoResponsivo().scale;
         return { 
-            x: Math.random() * (canvas.width - 85), 
-            y: Math.random() * (canvas.height - 45), 
-            width: 85, 
-            height: 45, 
+            x: Math.random() * (canvas.width - 85 * scale), 
+            y: Math.random() * (canvas.height - 45 * scale), 
+            width: Math.max(50, Math.floor(85 * scale)), 
+            height: Math.max(25, Math.floor(45 * scale)), 
             ativo: true, 
             tipo: TIPOS_INIMIGO.BOTO, 
             speed: 0, 
@@ -708,64 +772,80 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.shadowColor = '#FFD700';
         ctx.shadowBlur = 20;
-        ctx.font = "bold 56px Arial";
+        
+        const scale = getTamanhoResponsivo().scale;
+        const fontSizeTitulo = isMobile ? Math.min(40, 56 * scale) : 56;
+        const fontSizePos = isMobile ? Math.min(18, 24 * scale) : 24;
+        const fontSizeJogador = isMobile ? Math.min(16, 22 * scale) : 22;
+        const fontSizePontuacao = isMobile ? Math.min(16, 22 * scale) : 22;
+        
+        ctx.font = `bold ${fontSizeTitulo}px Arial`;
         ctx.fillStyle = '#FFD700';
         ctx.textAlign = "center";
-        ctx.fillText('🏆 RANKING 🏆', canvas.width / 2, 100);
+        ctx.fillText('🏆 RANKING 🏆', canvas.width / 2, 100 * scale);
         ctx.shadowBlur = 0;
+        
         carregarRanking();
+        
         if (ranking.length === 0) {
-            ctx.font = "bold 32px Arial";
+            ctx.font = `bold ${32 * scale}px Arial`;
             ctx.fillStyle = '#FFFFFF';
-            ctx.fillText('Nenhum registro ainda!', canvas.width / 2, 300);
-            ctx.font = "24px Arial";
+            ctx.fillText('Nenhum registro ainda!', canvas.width / 2, 300 * scale);
+            ctx.font = `${24 * scale}px Arial`;
             ctx.fillStyle = '#98FB98';
-            ctx.fillText('Jogue e faça sua melhor pontuação!', canvas.width / 2, 380);
+            ctx.fillText('Jogue e faça sua melhor pontuação!', canvas.width / 2, 380 * scale);
         } else {
-            ctx.font = "bold 24px Arial";
+            ctx.font = `bold ${fontSizePos}px Arial`;
             ctx.fillStyle = '#FFD700';
-            ctx.fillText('POS', canvas.width / 2 - 200, 180);
-            ctx.fillText('JOGADOR', canvas.width / 2 - 50, 180);
-            ctx.fillText('PEIXES', canvas.width / 2 + 150, 180);
+            ctx.fillText('POS', canvas.width / 2 - 200 * scale, 180 * scale);
+            ctx.fillText('JOGADOR', canvas.width / 2 - 50 * scale, 180 * scale);
+            ctx.fillText('PEIXES', canvas.width / 2 + 150 * scale, 180 * scale);
+            
             ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(canvas.width / 2 - 250, 200);
-            ctx.lineTo(canvas.width / 2 + 250, 200);
+            ctx.moveTo(canvas.width / 2 - 250 * scale, 200 * scale);
+            ctx.lineTo(canvas.width / 2 + 250 * scale, 200 * scale);
             ctx.stroke();
+            
             for (let i = 0; i < ranking.length; i++) {
-                const y = 250 + i * 55;
+                const y = 250 * scale + i * 55 * scale;
                 let medalha = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}º`;
                 const corTexto = (ranking[i].nome === nomeJogadorAtual) ? '#FFD700' : '#FFFFFF';
-                ctx.font = "bold 22px Arial";
+                
+                ctx.font = `bold ${fontSizeJogador}px Arial`;
                 ctx.fillStyle = '#FFD700';
-                ctx.fillText(medalha, canvas.width / 2 - 200, y);
-                ctx.font = "20px Arial";
+                ctx.fillText(medalha, canvas.width / 2 - 200 * scale, y);
+                
+                ctx.font = `${20 * scale}px Arial`;
                 ctx.fillStyle = corTexto;
-                ctx.fillText(ranking[i].nome, canvas.width / 2 - 50, y);
-                ctx.font = "bold 22px Arial";
+                ctx.fillText(ranking[i].nome, canvas.width / 2 - 50 * scale, y);
+                
+                ctx.font = `bold ${fontSizePontuacao}px Arial`;
                 ctx.fillStyle = '#98FB98';
-                ctx.fillText(ranking[i].pontuacao.toString(), canvas.width / 2 + 150, y);
+                ctx.fillText(ranking[i].pontuacao.toString(), canvas.width / 2 + 150 * scale, y);
+                
                 if (ranking[i].data) {
-                    ctx.font = "12px Arial";
+                    ctx.font = `${12 * scale}px Arial`;
                     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                    ctx.fillText(ranking[i].data, canvas.width / 2 + 220, y - 5);
+                    ctx.fillText(ranking[i].data, canvas.width / 2 + 220 * scale, y - 5);
                 }
             }
         }
+        
         ctx.shadowColor = '#000';
         ctx.shadowBlur = 10;
         ctx.fillStyle = '#4CAF50';
         ctx.beginPath();
-        roundRect(ctx, canvas.width / 2 - 120, 550, 240, 60, 30).fill();
+        roundRect(ctx, canvas.width / 2 - 120 * scale, 550 * scale, 240 * scale, 60 * scale, 30 * scale).fill();
         ctx.shadowBlur = 5;
-        ctx.font = "bold 28px Arial";
+        ctx.font = `bold ${28 * scale}px Arial`;
         ctx.fillStyle = '#FFF';
-        ctx.fillText('VOLTAR', canvas.width / 2, 585);
+        ctx.fillText('VOLTAR', canvas.width / 2, 585 * scale);
         ctx.shadowBlur = 0;
-        ctx.font = "18px Arial";
+        ctx.font = `${18 * scale}px Arial`;
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillText('Pressione R para voltar', canvas.width / 2, 630);
+        ctx.fillText('Pressione R para voltar', canvas.width / 2, 630 * scale);
     }
 
     function roundRect(ctx, x, y, w, h, r) {
@@ -792,20 +872,17 @@ document.addEventListener('DOMContentLoaded', function() {
             desenharAgua();
         }
         
-        // Configurações dos botões - DIMINUÍDOS E MAIS ABAIXO
+        // Configurações responsivas dos botões
         const centroX = canvas.width / 2;
         const centroY = canvas.height / 2;
-        const larguraBotao = 220;        // Largura reduzida
-        const alturaBotao = 60;           // Altura reduzida
-        const espacamento = 20;            // Espaçamento reduzido
-        const deslocamentoY = 50;          // Deslocamento para baixo
+        const botao = getTamanhoBotaoResponsivo();
         
         // Calcular posições Y com deslocamento para baixo
-        const alturaTotal = (alturaBotao * 2) + espacamento;
-        const yInicial = (centroY - (alturaTotal / 2)) + deslocamentoY;
+        const alturaTotal = (botao.altura * 2) + botao.espacamento;
+        const yInicial = (centroY - (alturaTotal / 2)) + botao.deslocamentoY;
         
         const yJogar = yInicial;
-        const yRanking = yInicial + alturaBotao + espacamento;
+        const yRanking = yInicial + botao.altura + botao.espacamento;
         
         // SOMBRA PARA DESTAQUE DOS BOTÕES
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
@@ -814,8 +891,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // BOTÃO JOGAR - Com gradiente
         const gradienteJogar = ctx.createLinearGradient(
-            centroX - larguraBotao/2, yJogar,
-            centroX + larguraBotao/2, yJogar + alturaBotao
+            centroX - botao.largura/2, yJogar,
+            centroX + botao.largura/2, yJogar + botao.altura
         );
         gradienteJogar.addColorStop(0, '#4CAF50');
         gradienteJogar.addColorStop(0.5, '#45a049');
@@ -823,7 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         ctx.fillStyle = gradienteJogar;
         ctx.beginPath();
-        roundRect(ctx, centroX - larguraBotao/2, yJogar, larguraBotao, alturaBotao, 30).fill();
+        roundRect(ctx, centroX - botao.largura/2, yJogar, botao.largura, botao.altura, botao.bordaRaio).fill();
         
         // Borda dourada no botão JOGAR
         ctx.strokeStyle = '#FFD700';
@@ -836,16 +913,16 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.shadowBlur = 8;
         ctx.shadowColor = '#000';
         ctx.shadowOffsetY = 3;
-        ctx.font = "bold 28px 'Arial', sans-serif";
+        ctx.font = `bold ${botao.fontSize}px 'Arial', sans-serif`;
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText('JOGAR', centroX, yJogar + alturaBotao/2);
+        ctx.fillText('JOGAR', centroX, yJogar + botao.altura/2);
         
         // BOTÃO RANKING - Com gradiente
         const gradienteRanking = ctx.createLinearGradient(
-            centroX - larguraBotao/2, yRanking,
-            centroX + larguraBotao/2, yRanking + alturaBotao
+            centroX - botao.largura/2, yRanking,
+            centroX + botao.largura/2, yRanking + botao.altura
         );
         gradienteRanking.addColorStop(0, '#3498db');
         gradienteRanking.addColorStop(0.5, '#2980b9');
@@ -853,7 +930,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         ctx.fillStyle = gradienteRanking;
         ctx.beginPath();
-        roundRect(ctx, centroX - larguraBotao/2, yRanking, larguraBotao, alturaBotao, 30).fill();
+        roundRect(ctx, centroX - botao.largura/2, yRanking, botao.largura, botao.altura, botao.bordaRaio).fill();
         
         // Borda dourada no botão RANKING
         ctx.strokeStyle = '#FFD700';
@@ -866,9 +943,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.shadowBlur = 8;
         ctx.shadowColor = '#000';
         ctx.shadowOffsetY = 3;
-        ctx.font = "bold 28px 'Arial', sans-serif";
+        ctx.font = `bold ${botao.fontSize}px 'Arial', sans-serif`;
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('RANKING', centroX, yRanking + alturaBotao/2);
+        ctx.fillText('RANKING', centroX, yRanking + botao.altura/2);
         
         // Resetar sombras
         ctx.shadowBlur = 0;
@@ -877,26 +954,35 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function desenharMensagemVitoriaFase() {
+        const scale = getTamanhoResponsivo().scale;
+        
         ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.shadowColor = '#FFD700';
         ctx.shadowBlur = 30;
-        ctx.font = "bold 64px Arial";
+        
+        ctx.font = `bold ${64 * scale}px Arial`;
         ctx.fillStyle = '#FFD700';
-        ctx.fillText('✨ VITÓRIA! ✨', canvas.width / 2, canvas.height / 2 - 80);
-        ctx.font = "bold 48px Arial";
+        ctx.fillText('✨ VITÓRIA! ✨', canvas.width / 2, canvas.height / 2 - 80 * scale);
+        
+        ctx.font = `bold ${48 * scale}px Arial`;
         ctx.fillStyle = '#98FB98';
         ctx.fillText(`FASE ${faseVitoriosa} CONCLUÍDA!`, canvas.width / 2, canvas.height / 2);
-        ctx.font = "bold 24px Arial";
+        
+        ctx.font = `bold ${24 * scale}px Arial`;
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(`Peixes: ${peixesPescados}`, canvas.width / 2, canvas.height / 2 + 60);
-        ctx.font = "bold 20px Arial";
+        ctx.fillText(`Peixes: ${peixesPescados}`, canvas.width / 2, canvas.height / 2 + 60 * scale);
+        
+        ctx.font = `bold ${20 * scale}px Arial`;
         ctx.fillStyle = '#FFD700';
-        ctx.fillText('Preparando próxima fase...', canvas.width / 2, canvas.height / 2 + 120);
+        ctx.fillText('Preparando próxima fase...', canvas.width / 2, canvas.height / 2 + 120 * scale);
+        
         ctx.shadowBlur = 0;
     }
 
     function desenharElementosJogo() {
+        const scale = getTamanhoResponsivo().scale;
+        
         if (vibracaoAtiva) {
             ctx.save();
             ctx.translate(Math.random() * 10 - 5, Math.random() * 10 - 5);
@@ -915,32 +1001,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (vibracaoAtiva) ctx.restore();
         
         ctx.fillStyle = "white";
-        ctx.font = "bold 18px Arial";
-        ctx.fillText(`🐟 ${peixesPescados}`, 25, 30);
-        ctx.fillText(`❤️ ${vidas}`, 100, 30);
-        ctx.fillText(`🌊 ${faseAtual}/${CONFIG.MAX_FASE}`, 175, 30);
+        ctx.font = `bold ${18 * scale}px Arial`;
+        ctx.fillText(`🐟 ${peixesPescados}`, 25 * scale, 30 * scale);
+        ctx.fillText(`❤️ ${vidas}`, 100 * scale, 30 * scale);
+        ctx.fillText(`🌊 ${faseAtual}/${CONFIG.MAX_FASE}`, 175 * scale, 30 * scale);
         
         const progresso = peixesNestaFase / CONFIG.PEIXES_PARA_PROXIMA_FASE;
         ctx.fillStyle = "rgba(255,255,255,0.3)";
-        ctx.fillRect(250, 20, 100, 15);
+        ctx.fillRect(250 * scale, 20 * scale, 100 * scale, 15 * scale);
         ctx.fillStyle = "#4CAF50";
-        ctx.fillRect(250, 20, 100 * Math.min(progresso, 1), 15);
+        ctx.fillRect(250 * scale, 20 * scale, 100 * scale * Math.min(progresso, 1), 15 * scale);
         ctx.strokeStyle = "#FFD700";
-        ctx.strokeRect(250, 20, 100, 15);
+        ctx.strokeRect(250 * scale, 20 * scale, 100 * scale, 15 * scale);
         
         if (player.paralisado) {
             ctx.fillStyle = "#FFFF00";
-            ctx.font = "bold 16px Arial";
-            ctx.fillText(`⚡ PARALISADO ${Math.ceil(peixeEletrico.tempoChoque / 60)}s`, 25, 60);
+            ctx.font = `bold ${16 * scale}px Arial`;
+            ctx.fillText(`⚡ PARALISADO ${Math.ceil(peixeEletrico.tempoChoque / 60)}s`, 25 * scale, 60 * scale);
         }
         if (powerUpAtivo) {
             ctx.fillStyle = "#FFA500";
-            ctx.font = "bold 14px Arial";
-            ctx.fillText(`🦐 ${(powerUpTempoRestante / 1000).toFixed(1)}s`, 360, 30);
+            ctx.font = `bold ${14 * scale}px Arial`;
+            ctx.fillText(`🦐 ${(powerUpTempoRestante / 1000).toFixed(1)}s`, 360 * scale, 30 * scale);
         }
         if (faseAguardando && contagemRegressiva > 0) {
             ctx.save();
-            ctx.font = "bold 120px Arial";
+            ctx.font = `bold ${120 * scale}px Arial`;
             ctx.fillStyle = "#FFD700";
             ctx.fillText(contagemRegressiva.toString(), canvas.width / 2, canvas.height / 2);
             ctx.restore();
@@ -974,6 +1060,7 @@ document.addEventListener('DOMContentLoaded', function() {
         powerUpTempoRestante = 0;
         
         const config = getConfigFase(faseAtual);
+        const scale = getTamanhoResponsivo().scale;
         
         jacares = [];
         for (let i = 0; i < config.qtdJacare; i++) jacares.push(criarJacareSimples(config));
@@ -985,7 +1072,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (peixeEletrico.ativo) {
             peixeEletrico.x = canvas.width * (0.3 + Math.random() * 0.4);
             peixeEletrico.y = canvas.height * (0.3 + Math.random() * 0.4);
-            peixeEletrico.velocidade = 1.0 + (faseAtual * 0.1);
+            peixeEletrico.velocidade = (1.0 + (faseAtual * 0.1)) * scale;
             peixeEletrico.direcao = { 
                 x: (Math.random() > 0.5 ? 1 : -1) * (0.8 + Math.random() * 0.4), 
                 y: (Math.random() - 0.5) * 0.6 
@@ -1001,11 +1088,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         for (let i = 0; i < config.qtdPeixes; i++) {
             peixes.push({ 
-                x: Math.random() * (canvas.width - 40), 
-                y: Math.random() * (canvas.height - 30), 
-                width: 35, height: 25, 
+                x: Math.random() * (canvas.width - 40 * scale), 
+                y: Math.random() * (canvas.height - 30 * scale), 
+                width: Math.max(20, Math.floor(35 * scale)), 
+                height: Math.max(15, Math.floor(25 * scale)), 
                 pontos: 1, 
-                velocidade: 0.5, 
+                velocidade: 0.5 * scale, 
                 direcao: Math.random() > 0.5 ? 1 : -1, 
                 ativo: true, 
                 ondulacao: Math.random() * Math.PI * 2, 
@@ -1648,32 +1736,30 @@ document.addEventListener('DOMContentLoaded', function() {
         if (estadoAtual === ESTADO.TELA_INICIAL) {
             const centroX = canvas.width / 2;
             const centroY = canvas.height / 2;
-            const larguraBotao = 220;
-            const alturaBotao = 60;
-            const espacamento = 20;
-            const deslocamentoY = 50;
+            const botao = getTamanhoBotaoResponsivo();
             
             // Calcular posições Y com deslocamento
-            const alturaTotal = (alturaBotao * 2) + espacamento;
-            const yInicial = (centroY - (alturaTotal / 2)) + deslocamentoY;
+            const alturaTotal = (botao.altura * 2) + botao.espacamento;
+            const yInicial = (centroY - (alturaTotal / 2)) + botao.deslocamentoY;
             
             const yJogar = yInicial;
-            const yRanking = yInicial + alturaBotao + espacamento;
+            const yRanking = yInicial + botao.altura + botao.espacamento;
             
             // Detectar clique no botão JOGAR
-            if (x >= centroX - larguraBotao/2 && x <= centroX + larguraBotao/2 &&
-                y >= yJogar && y <= yJogar + alturaBotao) {
+            if (x >= centroX - botao.largura/2 && x <= centroX + botao.largura/2 &&
+                y >= yJogar && y <= yJogar + botao.altura) {
                 nameInputScreen.style.display = "flex";
                 playerNameInput.focus();
             }
             // Detectar clique no botão RANKING
-            else if (x >= centroX - larguraBotao/2 && x <= centroX + larguraBotao/2 &&
-                     y >= yRanking && y <= yRanking + alturaBotao) {
+            else if (x >= centroX - botao.largura/2 && x <= centroX + botao.largura/2 &&
+                     y >= yRanking && y <= yRanking + botao.altura) {
                 estadoAtual = ESTADO.RANKING;
                 carregarRanking();
             }
         } else if (estadoAtual === ESTADO.RANKING) {
-            if (y > 550 && y < 610) {
+            const scale = getTamanhoResponsivo().scale;
+            if (y > 550 * scale && y < 610 * scale) {
                 estadoAtual = ESTADO.TELA_INICIAL;
             }
         }
@@ -1687,32 +1773,31 @@ document.addEventListener('DOMContentLoaded', function() {
         if (estadoAtual === ESTADO.TELA_INICIAL) {
             const centroX = canvas.width / 2;
             const centroY = canvas.height / 2;
-            const larguraBotao = 220;
-            const alturaBotao = 60;
-            const espacamento = 20;
-            const deslocamentoY = 50;
+            const botao = getTamanhoBotaoResponsivo();
             
             // Calcular posições Y com deslocamento
-            const alturaTotal = (alturaBotao * 2) + espacamento;
-            const yInicial = (centroY - (alturaTotal / 2)) + deslocamentoY;
+            const alturaTotal = (botao.altura * 2) + botao.espacamento;
+            const yInicial = (centroY - (alturaTotal / 2)) + botao.deslocamentoY;
             
             const yJogar = yInicial;
-            const yRanking = yInicial + alturaBotao + espacamento;
+            const yRanking = yInicial + botao.altura + botao.espacamento;
             
             // Detectar toque no botão JOGAR
-            if (x >= centroX - larguraBotao/2 && x <= centroX + larguraBotao/2 &&
-                y >= yJogar && y <= yJogar + alturaBotao) {
+            if (x >= centroX - botao.largura/2 && x <= centroX + botao.largura/2 &&
+                y >= yJogar && y <= yJogar + botao.altura) {
                 nameInputScreen.style.display = "flex";
                 playerNameInput.focus();
             }
             // Detectar toque no botão RANKING
-            else if (x >= centroX - larguraBotao/2 && x <= centroX + larguraBotao/2 &&
-                     y >= yRanking && y <= yRanking + alturaBotao) {
+            else if (x >= centroX - botao.largura/2 && x <= centroX + botao.largura/2 &&
+                     y >= yRanking && y <= yRanking + botao.altura) {
                 estadoAtual = ESTADO.RANKING;
                 carregarRanking();
             }
         } else if (estadoAtual === ESTADO.RANKING) {
-            if (x >= canvas.width / 2 - 120 && x <= canvas.width / 2 + 120 && y >= 550 && y <= 610) {
+            const scale = getTamanhoResponsivo().scale;
+            if (x >= canvas.width / 2 - 120 * scale && x <= canvas.width / 2 + 120 * scale && 
+                y >= 550 * scale && y <= 610 * scale) {
                 estadoAtual = ESTADO.TELA_INICIAL;
             }
         }
@@ -1820,6 +1905,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', () => {
         checkOrientation();
         ajustarCanvasParaMobile();
+        
+        // Recalcular posições do player se necessário
+        if (estadoAtual === ESTADO.JOGANDO) {
+            player.respawnX = canvas.width / 2 - player.size / 2;
+            player.respawnY = canvas.height / 2 - player.size / 2;
+        }
     });
     
     window.addEventListener('orientationchange', () => {
