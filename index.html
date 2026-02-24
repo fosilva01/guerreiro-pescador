@@ -1,8 +1,8 @@
-ads<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Ribeirinho</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -11,6 +11,8 @@ ads<!DOCTYPE html>
         <div style="position: relative;">
             <canvas id="gameCanvas" width="900" height="550"></canvas>
             <div id="loading" style="display: none;">Carregando imagens...</div>
+            <div id="soundStatus" style="display: none;"></div>
+            
             <!-- Tela de input de nome -->
             <div id="nameInputScreen" class="name-input-screen" style="display: none;">
                 <div class="name-input-title">👋 Digite seu nome</div>
@@ -20,7 +22,8 @@ ads<!DOCTYPE html>
             </div>
         </div>
         
-        <div id="gameInfo">9
+        <div id="gameInfo">
+            <div id="phaseDisplay" style="display: none;">🌊 FASE 1/3</div>
             <div class="controls">
                 <div class="control-item">
                     <span class="key">←↑↓→</span>
@@ -38,13 +41,24 @@ ads<!DOCTYPE html>
                     <span class="key">ESPAÇO</span>
                     <span>Começar</span>
                 </div>
-                <div class="control-item">
-                    <span class="key">M</span>
-                    <span>Música</span>
-                </div>
             </div>
-            <div id="recordDisplay">🎯 Meta: 999 peixes | 🏆 Recorde: 0</div>
+            <div id="recordDisplay">🎯 Meta: 30 peixes | 🏆 Recorde: 0</div>
             <div class="error" id="errorMsg"></div>
+        </div>
+
+        <!-- Controles Touch para Mobile -->
+        <div id="touchControls" style="display: none;">
+            <button class="touch-btn" id="touchUp">↑</button>
+            <button class="touch-btn" id="touchDown">↓</button>
+            <button class="touch-btn" id="touchLeft">←</button>
+            <button class="touch-btn" id="touchRight">→</button>
+            <button class="touch-btn" id="touchPause">⏸️</button>
+            <button class="touch-btn" id="touchMenu">🏠</button>
+        </div>
+
+        <!-- Mensagem de orientação para mobile -->
+        <div id="orientationMessage" style="display: none;">
+            <div>📱 Por favor, gire o dispositivo para o modo paisagem</div>
         </div>
     </div>
 

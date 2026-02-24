@@ -2,6 +2,8 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -11,18 +13,19 @@ body {
     justify-content: center;
     align-items: center;
     font-family: 'Arial', sans-serif;
-    padding: 15px;
+    padding: 10px;
 }
 
 #gameContainer {
     background: #0a1f2e;
     border-radius: 25px;
-    padding: 20px;
+    padding: 15px;
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
     border: 4px solid #4a90e2;
     max-width: 1000px;
-    width: fit-content;
+    width: 100%;
     margin: 0 auto;
+    position: relative;
 }
 
 canvas {
@@ -34,6 +37,7 @@ canvas {
     width: 100%;
     height: auto;
     border: 2px solid #ffd700;
+    touch-action: none;
 }
 
 #loading {
@@ -42,18 +46,32 @@ canvas {
     left: 50%;
     transform: translate(-50%, -50%);
     color: white;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: bold;
     background: rgba(0, 0, 0, 0.9);
-    padding: 25px 45px;
+    padding: 15px 30px;
     border-radius: 20px;
     z-index: 10;
     border: 3px solid #ffd700;
     box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+    text-align: center;
+    white-space: nowrap;
+}
+
+#soundStatus {
+    position: absolute;
+    bottom: 10px;
+    right: 20px;
+    color: #98fb98;
+    font-size: 14px;
+    background: rgba(0,0,0,0.5);
+    padding: 5px 10px;
+    border-radius: 20px;
+    z-index: 5;
 }
 
 #gameInfo {
-    margin-top: 20px;
+    margin-top: 15px;
     padding: 15px;
     background: rgba(10, 31, 46, 0.95);
     border-radius: 15px;
@@ -63,10 +81,18 @@ canvas {
     border: 2px solid #4a90e2;
 }
 
+#phaseDisplay {
+    margin-bottom: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 1px 1px 2px #000;
+}
+
 .controls {
     display: flex;
     justify-content: center;
-    gap: 25px;
+    gap: 15px;
     margin-top: 10px;
     color: #aaddff;
     flex-wrap: wrap;
@@ -77,7 +103,7 @@ canvas {
     align-items: center;
     gap: 8px;
     background: rgba(255, 255, 255, 0.1);
-    padding: 5px 12px;
+    padding: 5px 10px;
     border-radius: 30px;
     border: 1px solid #4a90e2;
 }
@@ -85,13 +111,13 @@ canvas {
 .key {
     background: #2c3e50;
     border: 2px solid #ffd700;
-    border-radius: 10px;
-    padding: 5px 15px;
+    border-radius: 8px;
+    padding: 5px 10px;
     font-weight: bold;
     color: #ffd700;
-    box-shadow: 0 5px 0 #1a3f5a;
-    font-size: 14px;
-    min-width: 50px;
+    box-shadow: 0 3px 0 #1a3f5a;
+    font-size: 12px;
+    min-width: 45px;
     text-align: center;
 }
 
@@ -102,7 +128,7 @@ canvas {
     color: #98fb98;
     text-shadow: 1px 1px 2px #000;
     background: rgba(0, 0, 0, 0.3);
-    padding: 8px 20px;
+    padding: 8px 15px;
     border-radius: 30px;
     display: inline-block;
     border: 1px solid #ffd700;
@@ -114,7 +140,7 @@ canvas {
     margin-top: 10px;
     font-weight: bold;
     background: rgba(0, 0, 0, 0.5);
-    padding: 5px 15px;
+    padding: 5px 10px;
     border-radius: 20px;
     display: inline-block;
 }
@@ -126,7 +152,7 @@ canvas {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.95);
-    display: flex;
+    display: none;
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -136,19 +162,20 @@ canvas {
 
 .name-input-title {
     color: #FFD700;
-    font-size: 32px;
+    font-size: 28px;
     font-weight: bold;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     text-shadow: 2px 2px 4px #000;
+    text-align: center;
 }
 
 .name-input-box {
     background: #333;
     border: 3px solid #FFD700;
     border-radius: 15px;
-    padding: 15px 30px;
-    width: 300px;
-    font-size: 24px;
+    padding: 12px 20px;
+    width: 280px;
+    font-size: 22px;
     color: white;
     text-align: center;
     margin-bottom: 20px;
@@ -164,8 +191,8 @@ canvas {
     background: #4CAF50;
     border: none;
     border-radius: 10px;
-    padding: 15px 40px;
-    font-size: 20px;
+    padding: 12px 30px;
+    font-size: 18px;
     font-weight: bold;
     color: white;
     cursor: pointer;
@@ -173,14 +200,106 @@ canvas {
     border: 2px solid #FFD700;
 }
 
-.name-input-button:hover {
-    transform: scale(1.05);
+.name-input-button:active {
+    transform: scale(0.95);
     background: #45a049;
-    box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
 }
 
 .name-input-info {
     color: rgba(255, 255, 255, 0.7);
     font-size: 14px;
-    margin-top: 20px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+/* Controles Touch */
+#touchControls {
+    display: none;
+    position: fixed;
+    bottom: 15px;
+    left: 0;
+    right: 0;
+    justify-content: center;
+    gap: 8px;
+    z-index: 30;
+    padding: 5px;
+}
+
+.touch-btn {
+    background: rgba(0, 0, 0, 0.8);
+    border: 3px solid #FFD700;
+    border-radius: 50px;
+    width: 60px;
+    height: 60px;
+    font-size: 28px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    touch-action: manipulation;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+
+.touch-btn:active {
+    transform: scale(0.9);
+    background: #4CAF50;
+}
+
+/* Orientação Mobile */
+#orientationMessage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0a2f44;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 100;
+    padding: 20px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #gameInfo {
+        margin-bottom: 80px;
+    }
+    
+    #touchControls {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    
+    .controls {
+        display: none;
+    }
+    
+    .name-input-title {
+        font-size: 24px;
+    }
+    
+    .name-input-box {
+        width: 250px;
+        font-size: 20px;
+    }
+    
+    .name-input-button {
+        font-size: 16px;
+        padding: 10px 25px;
+    }
+}
+
+@media (max-width: 480px) {
+    .touch-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+    }
 }
